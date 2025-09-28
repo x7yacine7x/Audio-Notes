@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Notes</title>
+    <link rel="icon" type="image/png" href="logo.png">
     <style>
         * {
             margin: 0;
@@ -96,6 +97,16 @@
             box-shadow: var(--shadow);
             border: 1px solid var(--border-color);
         }
+
+        .logo-icon {
+            height: 1em;
+            /* match text height */
+            width: auto;
+            /* keep aspect ratio */
+            vertical-align: middle;
+            /* align with text baseline */
+        }
+
 
         .file-controls {
             margin-bottom: 25px;
@@ -503,7 +514,9 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>🎵 Audio Notes</h1>
+            <h1>
+                <img src="logo.png" alt="Logo" class="logo-icon"> Audio Notes
+            </h1>
             <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
         </header>
 
@@ -583,9 +596,8 @@
         let currentFileName = '';
         let folderStructure = {};
         let currentFolderName = '';
-        let allFiles = []; // Store all files for easy access
-        let folderOrder = []; // Track folder display order
-        let storageData = {}; // In-memory storage replacement
+        let allFiles = [];
+        let folderOrder = [];
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function () {
@@ -609,13 +621,11 @@
 
         function selectFile(index, folderPath) {
             if (index >= 0 && index < allFiles.length) {
-                // Move this folder to the top of the order
                 if (folderPath) {
                     moveToTop(folderPath);
                 }
                 loadAudioFile(allFiles[index]);
 
-                // Auto-expand the folder containing the selected file
                 setTimeout(() => {
                     if (folderPath) {
                         const folderId = `folder-${folderPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -631,17 +641,13 @@
 
         function moveToTop(folderPath) {
             if (!folderPath) return;
-            
-            // Remove from current position
+
             const currentIndex = folderOrder.indexOf(folderPath);
             if (currentIndex > -1) {
                 folderOrder.splice(currentIndex, 1);
             }
 
-            // Add to beginning
             folderOrder.unshift(folderPath);
-
-            // Update display
             updateFolderDisplay();
         }
 
@@ -660,17 +666,18 @@
             audioPlayer.addEventListener('pause', updateStatus);
             audioPlayer.addEventListener('ended', updateStatus);
             audioPlayer.addEventListener('loadstart', updateStatus);
+            audioPlayer.addEventListener('loadedmetadata', updateTimeDisplay);
+            audioPlayer.addEventListener('durationchange', updateTimeDisplay);
         }
 
         function handleSingleFileSelect(event) {
             const file = event.target.files[0];
             if (file) {
-                // Reset all data for single file mode
                 allFiles = [file];
                 folderOrder = [];
                 folderStructure = {};
                 currentFolderName = '';
-                
+
                 loadAudioFile(file);
                 updateFolderDisplay();
             }
@@ -685,17 +692,13 @@
                 return;
             }
 
-            // Store all files for easy access
             allFiles = audioFiles;
-
-            // Build folder structure
             folderStructure = buildFolderStructure(audioFiles);
             const rootFolders = Object.keys(folderStructure);
             currentFolderName = rootFolders.length > 0 ? rootFolders[0] : 'Selected Folder';
 
             updateFolderDisplay();
 
-            // Load the first audio file
             const firstFile = getFirstAudioFile(folderStructure);
             if (firstFile) {
                 loadAudioFile(firstFile);
@@ -704,19 +707,18 @@
 
         function buildFolderStructure(files) {
             const structure = {};
-            folderOrder = []; // Reset folder order
+            folderOrder = [];
 
             files.forEach(file => {
                 const pathParts = file.webkitRelativePath ? file.webkitRelativePath.split('/') : [file.name];
-                
-                // Handle single files (no webkitRelativePath)
+
                 if (pathParts.length === 1) {
                     const rootFolder = 'Root';
                     if (!structure[rootFolder]) {
                         structure[rootFolder] = { _files: [] };
                     }
                     structure[rootFolder]._files.push(file);
-                    
+
                     if (!folderOrder.includes('Root')) {
                         folderOrder.push('Root');
                     }
@@ -731,7 +733,6 @@
                 let current = structure[rootFolder];
                 let currentPath = rootFolder;
 
-                // Navigate through the path, creating nested structure
                 for (let i = 1; i < pathParts.length - 1; i++) {
                     const folderName = pathParts[i];
                     currentPath += '/' + folderName;
@@ -742,14 +743,12 @@
                     current = current[folderName];
                 }
 
-                // Add the file to the final folder
                 const fileName = pathParts[pathParts.length - 1];
                 if (!current._files) {
                     current._files = [];
                 }
                 current._files.push(file);
 
-                // Track folder path for ordering
                 const fullPath = pathParts.slice(0, -1).join('/');
                 if (!folderOrder.includes(fullPath)) {
                     folderOrder.push(fullPath);
@@ -761,7 +760,7 @@
 
         function getFirstAudioFile(structure) {
             for (const key in structure) {
-                if (key === '_files' && structure[key].length > 0) {
+                if (key === '_files' && structure[key] && structure[key].length > 0) {
                     return structure[key][0];
                 } else if (typeof structure[key] === 'object') {
                     const file = getFirstAudioFile(structure[key]);
@@ -789,14 +788,13 @@
         }
 
         function renderFolderStructure(structure, container, path = '') {
-            // Create array of folder data for sorting
             const folderData = [];
 
             function collectFolders(struct, currentPath) {
                 for (const key in struct) {
                     if (key === '_files') {
                         const files = struct[key];
-                        if (files.length > 0) {
+                        if (files && files.length > 0) {
                             const displayPath = currentPath || 'Root';
                             const fullPath = currentPath;
                             folderData.push({
@@ -815,24 +813,22 @@
 
             collectFolders(structure, path);
 
-            // Sort folders by order (recently accessed first)
             folderData.sort((a, b) => {
                 const orderA = a.order === -1 ? Infinity : a.order;
                 const orderB = b.order === -1 ? Infinity : b.order;
                 return orderA - orderB;
             });
 
-            // Render sorted folders
             folderData.forEach(folder => {
                 const folderSection = document.createElement('div');
-                folderSection.className = 'folder-section collapsed'; // Start collapsed
+                folderSection.className = 'folder-section collapsed';
 
                 const folderId = `folder-${folder.fullPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
                 const folderHeaderContent = `
                     <span>📁 ${escapeHtml(folder.path)}</span>
                     <div class="folder-move-controls">
-                        ${folder.fullPath ? `<button class="btn-move" onclick="event.stopPropagation(); moveToTop('${escapeHtml(folder.fullPath)}')" title="Move to top">↑</button>` : ''}
+                        ${folder.fullPath ? `<button class="btn-move" onclick="event.stopPropagation(); moveToTop('${escapeHtml(folder.fullPath).replace(/'/g, '\\\'')}')" title="Move to top">↑</button>` : ''}
                         <span class="folder-toggle">▼</span>
                     </div>
                 `;
@@ -841,7 +837,8 @@
                     const fileIndex = getFileIndex(file);
                     return `
                         <button class="file-tab ${file.name === currentFileName ? 'active' : ''}" 
-                                onclick="selectFile(${fileIndex}, '${escapeHtml(folder.fullPath)}')">
+                                onclick="selectFile(${fileIndex}, '${escapeHtml(folder.fullPath).replace(/'/g, '\\\'')}')"
+                                title="${escapeHtml(file.name)}">
                             ${escapeHtml(file.name)}
                         </button>
                     `;
@@ -882,16 +879,16 @@
             const noteInput = document.getElementById('noteInput');
             const addNoteBtn = document.getElementById('addNoteBtn');
 
-            // Clean up previous audio URL
             if (currentAudio) {
                 URL.revokeObjectURL(currentAudio);
             }
 
-            // Create object URL for the file
             try {
                 currentAudio = URL.createObjectURL(file);
                 audioPlayer.src = currentAudio;
                 audioPlayer.style.display = 'block';
+                audioPlayer.currentTime = 0;
+
             } catch (error) {
                 console.error('Error creating object URL:', error);
                 alert('Error loading audio file. Please try again.');
@@ -901,14 +898,10 @@
             currentFileDiv.style.display = 'block';
             fileNameSpan.textContent = currentFileName;
 
-            // Enable note input
             noteInput.disabled = false;
             addNoteBtn.disabled = false;
 
-            // Load notes for this file
             loadNotesForFile();
-
-            // Update folder display to highlight current file
             updateFolderDisplay();
         }
 
@@ -923,28 +916,18 @@
             const audioPlayer = document.getElementById('audioPlayer');
             const timeDisplay = document.getElementById('timeDisplay');
 
-            if (!audioPlayer || isNaN(audioPlayer.duration)) {
-                return;
-            }
-
-            const current = formatTime(audioPlayer.currentTime || 0);
-            const duration = formatTime(audioPlayer.duration || 0);
-
-            timeDisplay.innerHTML = `<span class="status-indicator ${getStatusClass()}" id="statusIndicator"></span>${current} / ${duration}`;
-        }
-
-        function updateStatus() {
-            const audioPlayer = document.getElementById('audioPlayer');
-            const timeDisplay = document.getElementById('timeDisplay');
-
             if (!audioPlayer || !timeDisplay) {
                 return;
             }
 
             const current = formatTime(audioPlayer.currentTime || 0);
-            const duration = formatTime(audioPlayer.duration || 0);
+            const duration = isNaN(audioPlayer.duration) ? '00:00' : formatTime(audioPlayer.duration);
 
             timeDisplay.innerHTML = `<span class="status-indicator ${getStatusClass()}" id="statusIndicator"></span>${current} / ${duration}`;
+        }
+
+        function updateStatus() {
+            updateTimeDisplay();
         }
 
         function getStatusClass() {
@@ -973,9 +956,9 @@
                 return;
             }
 
-            const timestamp = audioPlayer.currentTime;
+            const timestamp = audioPlayer.currentTime || 0;
             const note = {
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 timestamp: timestamp,
                 text: noteText,
                 timeString: formatTime(timestamp)
@@ -1009,12 +992,12 @@
                 const editBtn = noteItem.querySelector('button[onclick*="editNote"]');
                 const saveBtn = noteItem.querySelector('button[onclick*="saveNote"]');
                 const cancelBtn = noteItem.querySelector('button[onclick*="cancelEdit"]');
-                
+
                 if (editInput && textElement) {
                     editInput.value = textElement.textContent;
                     editInput.focus();
                 }
-                
+
                 if (editBtn) editBtn.style.display = 'none';
                 if (saveBtn) saveBtn.style.display = 'inline-block';
                 if (cancelBtn) cancelBtn.style.display = 'inline-block';
@@ -1024,10 +1007,10 @@
         function saveNote(id) {
             const noteItem = document.querySelector(`[data-note-id="${id}"]`);
             if (!noteItem) return;
-            
+
             const editInput = noteItem.querySelector('.note-edit-input');
             if (!editInput) return;
-            
+
             const newText = editInput.value.trim();
 
             if (!newText) {
@@ -1047,11 +1030,11 @@
             const noteItem = document.querySelector(`[data-note-id="${id}"]`);
             if (noteItem) {
                 noteItem.classList.remove('edit-mode');
-                
+
                 const editBtn = noteItem.querySelector('button[onclick*="editNote"]');
                 const saveBtn = noteItem.querySelector('button[onclick*="saveNote"]');
                 const cancelBtn = noteItem.querySelector('button[onclick*="cancelEdit"]');
-                
+
                 if (editBtn) editBtn.style.display = 'inline-block';
                 if (saveBtn) saveBtn.style.display = 'none';
                 if (cancelBtn) cancelBtn.style.display = 'none';
@@ -1060,7 +1043,7 @@
 
         function jumpToTime(timestamp) {
             const audioPlayer = document.getElementById('audioPlayer');
-            if (audioPlayer && !isNaN(timestamp)) {
+            if (audioPlayer && !isNaN(timestamp) && timestamp >= 0) {
                 audioPlayer.currentTime = timestamp;
                 audioPlayer.focus();
             }
@@ -1090,11 +1073,10 @@
                 </div>
             `).join('');
 
-            // Add event listeners for edit mode
             notes.forEach(note => {
                 const noteItem = document.querySelector(`[data-note-id="${note.id}"]`);
                 if (!noteItem) return;
-                
+
                 const editInput = noteItem.querySelector('.note-edit-input');
                 if (!editInput) return;
 
@@ -1115,15 +1097,24 @@
         function saveNotesForFile() {
             if (currentFileName) {
                 const key = getNotesKey();
-                storageData[key] = JSON.stringify(notes);
+                try {
+                    localStorage.setItem(key, JSON.stringify(notes));
+                } catch (error) {
+                    console.error('Error saving notes to localStorage:', error);
+                }
             }
         }
 
         function loadNotesForFile() {
             if (currentFileName) {
                 const key = getNotesKey();
-                const savedNotes = storageData[key];
-                notes = savedNotes ? JSON.parse(savedNotes) : [];
+                try {
+                    const savedNotes = localStorage.getItem(key);
+                    notes = savedNotes ? JSON.parse(savedNotes) : [];
+                } catch (error) {
+                    console.error('Error loading notes from localStorage:', error);
+                    notes = [];
+                }
                 renderNotes();
             }
         }
@@ -1140,17 +1131,22 @@
                 notes: notes
             };
 
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
+            try {
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
 
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${currentFileName.replace(/\.[^/.]+$/, '')}_notes.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${currentFileName.replace(/\.[^/.]+$/, '')}_notes.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
 
-            URL.revokeObjectURL(url);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error exporting notes:', error);
+                alert('Error exporting notes. Please try again.');
+            }
         }
 
         function handleImportFile(event) {
@@ -1170,8 +1166,10 @@
                         if (shouldReplace) {
                             notes = importData.notes.map(note => ({
                                 ...note,
-                                id: note.id || Date.now() + Math.random()
+                                id: note.id || Date.now() + Math.random(),
+                                timeString: note.timeString || formatTime(note.timestamp || 0)
                             }));
+                            notes.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
                             saveNotesForFile();
                             renderNotes();
                             alert('Notes imported successfully!');
@@ -1180,12 +1178,19 @@
                         alert('Invalid notes file format.');
                     }
                 } catch (error) {
+                    console.error('Error importing notes:', error);
                     alert('Error reading notes file: ' + error.message);
                 }
 
-                // Reset file input
                 event.target.value = '';
             };
+
+            reader.onerror = function (error) {
+                console.error('FileReader error:', error);
+                alert('Error reading file. Please try again.');
+                event.target.value = '';
+            };
+
             reader.readAsText(file);
         }
 
@@ -1196,21 +1201,35 @@
             if (body.getAttribute('data-theme') === 'dark') {
                 body.removeAttribute('data-theme');
                 button.textContent = '🌙 Dark Mode';
-                storageData.theme = 'light';
+                try {
+                    localStorage.setItem('audioNotes_theme', 'light');
+                } catch (e) {
+                    console.log('Could not save theme preference');
+                }
             } else {
                 body.setAttribute('data-theme', 'dark');
                 button.textContent = '☀️ Light Mode';
-                storageData.theme = 'dark';
+                try {
+                    localStorage.setItem('audioNotes_theme', 'dark');
+                } catch (e) {
+                    console.log('Could not save theme preference');
+                }
             }
         }
 
         function loadTheme() {
-            const savedTheme = storageData.theme;
-            const button = document.querySelector('.theme-toggle');
+            try {
+                const savedTheme = localStorage.getItem('audioNotes_theme');
+                const button = document.querySelector('.theme-toggle');
 
-            if (savedTheme === 'dark') {
-                document.body.setAttribute('data-theme', 'dark');
-                button.textContent = '☀️ Light Mode';
+                if (savedTheme === 'dark') {
+                    document.body.setAttribute('data-theme', 'dark');
+                    button.textContent = '☀️ Light Mode';
+                } else {
+                    button.textContent = '🌙 Dark Mode';
+                }
+            } catch (e) {
+                console.log('Could not load theme preference');
             }
         }
 
@@ -1255,15 +1274,6 @@
                     }
                     break;
             }
-        });
-
-        // Auto-save notes as user types
-        document.getElementById('noteInput').addEventListener('input', function () {
-            // Debounce auto-save
-            clearTimeout(this.autoSaveTimeout);
-            this.autoSaveTimeout = setTimeout(() => {
-                // Could implement draft saving here if needed
-            }, 1000);
         });
 
         // Add Enter + Ctrl shortcut to add note
