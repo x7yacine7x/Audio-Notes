@@ -585,6 +585,7 @@
         let currentFolderName = '';
         let allFiles = []; // Store all files for easy access
         let folderOrder = []; // Track folder display order
+        let storageData = {}; // In-memory storage replacement
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function () {
@@ -593,6 +594,7 @@
         });
 
         function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return '';
             return unsafe
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
@@ -608,13 +610,15 @@
         function selectFile(index, folderPath) {
             if (index >= 0 && index < allFiles.length) {
                 // Move this folder to the top of the order
-                moveToTop(folderPath);
+                if (folderPath) {
+                    moveToTop(folderPath);
+                }
                 loadAudioFile(allFiles[index]);
 
                 // Auto-expand the folder containing the selected file
                 setTimeout(() => {
-                    const folderId = document.querySelector(`[onclick*="${folderPath.replace(/[^a-zA-Z0-9]/g, '_')}"]`)?.getAttribute('onclick')?.match(/toggleFolder\('([^']+)'\)/)?.[1];
-                    if (folderId) {
+                    if (folderPath) {
+                        const folderId = `folder-${folderPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
                         const folderElement = document.getElementById(folderId);
                         if (folderElement) {
                             const folderSection = folderElement.parentElement;
@@ -626,6 +630,8 @@
         }
 
         function moveToTop(folderPath) {
+            if (!folderPath) return;
+            
             // Remove from current position
             const currentIndex = folderOrder.indexOf(folderPath);
             if (currentIndex > -1) {
@@ -637,12 +643,6 @@
 
             // Update display
             updateFolderDisplay();
-        }
-
-        function loadAudioFileByIndex(index) {
-            if (index >= 0 && index < allFiles.length) {
-                loadAudioFile(allFiles[index]);
-            }
         }
 
         function setupEventListeners() {
@@ -665,11 +665,13 @@
         function handleSingleFileSelect(event) {
             const file = event.target.files[0];
             if (file) {
-                allFiles = [file]; // Reset allFiles for single file
-                folderOrder = []; // Reset folder order
-                loadAudioFile(file);
-                currentFolderName = '';
+                // Reset all data for single file mode
+                allFiles = [file];
+                folderOrder = [];
                 folderStructure = {};
+                currentFolderName = '';
+                
+                loadAudioFile(file);
                 updateFolderDisplay();
             }
         }
@@ -688,7 +690,8 @@
 
             // Build folder structure
             folderStructure = buildFolderStructure(audioFiles);
-            currentFolderName = Object.keys(folderStructure)[0] || 'Selected Folder';
+            const rootFolders = Object.keys(folderStructure);
+            currentFolderName = rootFolders.length > 0 ? rootFolders[0] : 'Selected Folder';
 
             updateFolderDisplay();
 
@@ -704,9 +707,23 @@
             folderOrder = []; // Reset folder order
 
             files.forEach(file => {
-                const pathParts = file.webkitRelativePath.split('/');
-                const rootFolder = pathParts[0];
+                const pathParts = file.webkitRelativePath ? file.webkitRelativePath.split('/') : [file.name];
+                
+                // Handle single files (no webkitRelativePath)
+                if (pathParts.length === 1) {
+                    const rootFolder = 'Root';
+                    if (!structure[rootFolder]) {
+                        structure[rootFolder] = { _files: [] };
+                    }
+                    structure[rootFolder]._files.push(file);
+                    
+                    if (!folderOrder.includes('Root')) {
+                        folderOrder.push('Root');
+                    }
+                    return;
+                }
 
+                const rootFolder = pathParts[0];
                 if (!structure[rootFolder]) {
                     structure[rootFolder] = {};
                 }
@@ -775,24 +792,28 @@
             // Create array of folder data for sorting
             const folderData = [];
 
-            for (const key in structure) {
-                if (key === '_files') {
-                    const files = structure[key];
-                    if (files.length > 0) {
-                        const currentPath = path || 'Root';
-                        const fullPath = path;
-                        folderData.push({
-                            path: currentPath,
-                            fullPath: fullPath,
-                            files: files,
-                            order: folderOrder.indexOf(fullPath)
-                        });
+            function collectFolders(struct, currentPath) {
+                for (const key in struct) {
+                    if (key === '_files') {
+                        const files = struct[key];
+                        if (files.length > 0) {
+                            const displayPath = currentPath || 'Root';
+                            const fullPath = currentPath;
+                            folderData.push({
+                                path: displayPath,
+                                fullPath: fullPath,
+                                files: files,
+                                order: folderOrder.indexOf(fullPath)
+                            });
+                        }
+                    } else {
+                        const subPath = currentPath ? `${currentPath}/${key}` : key;
+                        collectFolders(struct[key], subPath);
                     }
-                } else {
-                    const subPath = path ? `${path}/${key}` : key;
-                    renderFolderStructure(structure[key], container, subPath);
                 }
             }
+
+            collectFolders(structure, path);
 
             // Sort folders by order (recently accessed first)
             folderData.sort((a, b) => {
@@ -806,23 +827,32 @@
                 const folderSection = document.createElement('div');
                 folderSection.className = 'folder-section collapsed'; // Start collapsed
 
-                const folderId = `folder-${folder.fullPath.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                const folderId = `folder-${folder.fullPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+                const folderHeaderContent = `
+                    <span>📁 ${escapeHtml(folder.path)}</span>
+                    <div class="folder-move-controls">
+                        ${folder.fullPath ? `<button class="btn-move" onclick="event.stopPropagation(); moveToTop('${escapeHtml(folder.fullPath)}')" title="Move to top">↑</button>` : ''}
+                        <span class="folder-toggle">▼</span>
+                    </div>
+                `;
+
+                const folderFilesContent = folder.files.map((file, index) => {
+                    const fileIndex = getFileIndex(file);
+                    return `
+                        <button class="file-tab ${file.name === currentFileName ? 'active' : ''}" 
+                                onclick="selectFile(${fileIndex}, '${escapeHtml(folder.fullPath)}')">
+                            ${escapeHtml(file.name)}
+                        </button>
+                    `;
+                }).join('');
 
                 folderSection.innerHTML = `
                     <div class="folder-header" onclick="toggleFolder('${folderId}')">
-                        <span>📁 ${escapeHtml(folder.path)}</span>
-                        <div class="folder-move-controls">
-                            <button class="btn-move" onclick="event.stopPropagation(); moveToTop('${escapeHtml(folder.fullPath)}')" title="Move to top">↑</button>
-                            <span class="folder-toggle">▼</span>
-                        </div>
+                        ${folderHeaderContent}
                     </div>
                     <div class="folder-files" id="${folderId}">
-                        ${folder.files.map((file, index) => `
-                            <button class="file-tab ${file.name === currentFileName ? 'active' : ''}" 
-                                    onclick="selectFile(${getFileIndex(file)}, '${escapeHtml(folder.fullPath)}')">
-                                ${escapeHtml(file.name)}
-                            </button>
-                        `).join('')}
+                        ${folderFilesContent}
                     </div>
                 `;
 
@@ -836,10 +866,6 @@
                 const folderSection = folderElement.parentElement;
                 folderSection.classList.toggle('collapsed');
             }
-        }
-
-        function getFileByName(fileName) {
-            return allFiles.find(f => f.name === fileName);
         }
 
         function loadAudioFile(file) {
@@ -887,6 +913,7 @@
         }
 
         function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return '00:00';
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -974,17 +1001,33 @@
 
         function editNote(id) {
             const noteItem = document.querySelector(`[data-note-id="${id}"]`);
-            noteItem.classList.add('edit-mode');
+            if (noteItem) {
+                noteItem.classList.add('edit-mode');
 
-            const textElement = noteItem.querySelector('.note-text');
-            const editInput = noteItem.querySelector('.note-edit-input');
-            editInput.value = textElement.textContent;
-            editInput.focus();
+                const textElement = noteItem.querySelector('.note-text');
+                const editInput = noteItem.querySelector('.note-edit-input');
+                const editBtn = noteItem.querySelector('button[onclick*="editNote"]');
+                const saveBtn = noteItem.querySelector('button[onclick*="saveNote"]');
+                const cancelBtn = noteItem.querySelector('button[onclick*="cancelEdit"]');
+                
+                if (editInput && textElement) {
+                    editInput.value = textElement.textContent;
+                    editInput.focus();
+                }
+                
+                if (editBtn) editBtn.style.display = 'none';
+                if (saveBtn) saveBtn.style.display = 'inline-block';
+                if (cancelBtn) cancelBtn.style.display = 'inline-block';
+            }
         }
 
         function saveNote(id) {
             const noteItem = document.querySelector(`[data-note-id="${id}"]`);
+            if (!noteItem) return;
+            
             const editInput = noteItem.querySelector('.note-edit-input');
+            if (!editInput) return;
+            
             const newText = editInput.value.trim();
 
             if (!newText) {
@@ -1002,13 +1045,25 @@
 
         function cancelEdit(id) {
             const noteItem = document.querySelector(`[data-note-id="${id}"]`);
-            noteItem.classList.remove('edit-mode');
+            if (noteItem) {
+                noteItem.classList.remove('edit-mode');
+                
+                const editBtn = noteItem.querySelector('button[onclick*="editNote"]');
+                const saveBtn = noteItem.querySelector('button[onclick*="saveNote"]');
+                const cancelBtn = noteItem.querySelector('button[onclick*="cancelEdit"]');
+                
+                if (editBtn) editBtn.style.display = 'inline-block';
+                if (saveBtn) saveBtn.style.display = 'none';
+                if (cancelBtn) cancelBtn.style.display = 'none';
+            }
         }
 
         function jumpToTime(timestamp) {
             const audioPlayer = document.getElementById('audioPlayer');
-            audioPlayer.currentTime = timestamp;
-            audioPlayer.focus();
+            if (audioPlayer && !isNaN(timestamp)) {
+                audioPlayer.currentTime = timestamp;
+                audioPlayer.focus();
+            }
         }
 
         function renderNotes() {
@@ -1022,10 +1077,10 @@
             notesList.innerHTML = notes.map(note => `
                 <div class="note-item" data-note-id="${note.id}">
                     <div class="note-timestamp" onclick="jumpToTime(${note.timestamp})">
-                        ${note.timeString}
+                        ${escapeHtml(note.timeString)}
                     </div>
-                    <div class="note-text">${note.text}</div>
-                    <textarea class="note-edit-input">${note.text}</textarea>
+                    <div class="note-text">${escapeHtml(note.text)}</div>
+                    <textarea class="note-edit-input">${escapeHtml(note.text)}</textarea>
                     <div class="note-actions">
                         <button class="btn-icon" onclick="editNote(${note.id})" title="Edit">✏️</button>
                         <button class="btn-icon" onclick="saveNote(${note.id})" title="Save" style="display: none;">💾</button>
@@ -1038,18 +1093,10 @@
             // Add event listeners for edit mode
             notes.forEach(note => {
                 const noteItem = document.querySelector(`[data-note-id="${note.id}"]`);
+                if (!noteItem) return;
+                
                 const editInput = noteItem.querySelector('.note-edit-input');
-                const editBtn = noteItem.querySelector('button[onclick*="editNote"]');
-                const saveBtn = noteItem.querySelector('button[onclick*="saveNote"]');
-                const cancelBtn = noteItem.querySelector('button[onclick*="cancelEdit"]');
-
-                editInput.addEventListener('input', () => {
-                    if (noteItem.classList.contains('edit-mode')) {
-                        editBtn.style.display = 'none';
-                        saveBtn.style.display = 'inline-block';
-                        cancelBtn.style.display = 'inline-block';
-                    }
-                });
+                if (!editInput) return;
 
                 editInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape') {
@@ -1068,14 +1115,14 @@
         function saveNotesForFile() {
             if (currentFileName) {
                 const key = getNotesKey();
-                localStorage.setItem(key, JSON.stringify(notes));
+                storageData[key] = JSON.stringify(notes);
             }
         }
 
         function loadNotesForFile() {
             if (currentFileName) {
                 const key = getNotesKey();
-                const savedNotes = localStorage.getItem(key);
+                const savedNotes = storageData[key];
                 notes = savedNotes ? JSON.parse(savedNotes) : [];
                 renderNotes();
             }
@@ -1149,16 +1196,16 @@
             if (body.getAttribute('data-theme') === 'dark') {
                 body.removeAttribute('data-theme');
                 button.textContent = '🌙 Dark Mode';
-                localStorage.setItem('theme', 'light');
+                storageData.theme = 'light';
             } else {
                 body.setAttribute('data-theme', 'dark');
                 button.textContent = '☀️ Light Mode';
-                localStorage.setItem('theme', 'dark');
+                storageData.theme = 'dark';
             }
         }
 
         function loadTheme() {
-            const savedTheme = localStorage.getItem('theme');
+            const savedTheme = storageData.theme;
             const button = document.querySelector('.theme-toggle');
 
             if (savedTheme === 'dark') {
@@ -1202,7 +1249,7 @@
                     if (e.ctrlKey) {
                         e.preventDefault();
                         const noteInput = document.getElementById('noteInput');
-                        if (!noteInput.disabled) {
+                        if (noteInput && !noteInput.disabled) {
                             noteInput.focus();
                         }
                     }
