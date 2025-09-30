@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="styles.css">
     <!-- Supabase JavaScript SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style id="rtlStyles"></style>
 </head>
 
 <body>
@@ -34,6 +35,9 @@
                     <span id="cloudStatusText">Connecting...</span>
                 </div>
                 <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+                <button class="btn btn-secondary btn-small" onclick="toggleLanguage()" id="languageBtn">
+                    🌐 العربية
+                </button>
             </div>
         </header>
 
@@ -156,6 +160,12 @@
                         <span class="status-indicator status-stopped" id="statusIndicator"></span>
                         00:00 / 00:00
                     </div>
+                    <button class="btn btn-secondary btn-small" onclick="playPreviousAudio()" title="Previous (↑)">
+                        ⬆️ Previous
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="playNextAudio()" title="Next (↓)">
+                        ⬇️ Next
+                    </button>
                 </div>
 
                 <div class="note-input-section">
