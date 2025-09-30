@@ -887,3 +887,87 @@ body {
     border-radius: 8px;
     margin-bottom: 8px;
 }
+
+/* RTL Support for Arabic */
+[dir="rtl"] {
+    text-align: right;
+}
+
+[dir="rtl"] .header {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .header-controls {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .file-input-group {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .audio-controls {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .note-controls {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .notes-header {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .export-import-controls {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .folder-header {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .folder-move-controls {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+[dir="rtl"] .cloud-file-item {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .cloud-folder-item {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .cloud-folder-icon {
+    margin-right: 0;
+    margin-left: 8px;
+}
+
+[dir="rtl"] .time-display {
+    direction: ltr;
+}
+
+[dir="rtl"] .note-timestamp {
+    direction: ltr;
+    display: inline-block;
+}
+
+/* Language-specific text */
+.lang-text {
+    display: inline-block;
+}
+
+/* Upload restriction notice */
+.upload-restriction-notice {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid var(--warning-color);
+    color: var(--text-color);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+[dir="rtl"] .upload-restriction-notice {
+    text-align: right;
+}
