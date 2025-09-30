@@ -17,13 +17,340 @@ let currentFolderName = '';
 let allFiles = [];
 let folderOrder = [];
 let isCloudConnected = false;
+let currentLanguage = 'en';
+let isRefreshing = false;
 
 // Profile variables
 let currentProfileId = null;
 let profiles = [];
+let sessionPasswords = {};
+let currentProfilePassword = null;
+
+// Translation system
+const translations = {
+    en: {
+        // Header
+        appTitle: 'Audio Notes',
+        manageProfiles: 'Manage Profiles',
+        showManagement: 'Show Management',
+        hideManagement: 'Hide Management',
+        darkMode: '🌙 Dark Mode',
+        lightMode: '☀️ Light Mode',
+        arabic: '🌐 العربية',
+        english: '🌐 English',
+
+        // Cloud status
+        cloudConnected: 'Cloud Connected',
+        cloudDisconnected: 'Cloud Disconnected',
+        connecting: 'Connecting...',
+
+        // Cloud storage
+        cloudStorage: 'Cloud Storage',
+        uploadAudioFiles: 'Upload Audio Files',
+        uploadFiles: '☁️ Upload Files',
+        uploadFolder: '📂 Upload Folder',
+        refresh: '🔄 Refresh',
+        folders: 'Folders',
+        noFoldersFound: 'No folders found',
+        root: 'Root',
+        noFilesInFolder: 'No files in this folder',
+
+        // Data management
+        dataManagement: 'Data Management',
+        exportFormat: 'Export Format',
+        exportScope: 'Export Scope',
+        actions: 'Actions',
+        exportData: '📤 Export Data',
+        importData: '📥 Import Data',
+        clearAll: '🗑️ Clear All',
+        jsonComplete: 'JSON (Complete Data)',
+        csvNotes: 'CSV (Notes Only)',
+        txtNotes: 'Text (Notes Only)',
+        markdown: 'Markdown (Formatted)',
+        currentFileOnly: 'Current File Only',
+        allAudioFiles: 'All Audio Files',
+        selectedFiles: 'Selected Files',
+
+        // Audio controls
+        selectAudioFile: '📁 Select Audio File',
+        selectFolder: '📂 Select Folder',
+        currentFolder: 'Current Folder',
+        currentFile: 'Current File',
+        previous: '⬅️ Previous',
+        next: '➡️ Next',
+
+        // Notes
+        notes: 'Notes',
+        export: '📤 Export',
+        import: '📥 Import',
+        addNoteAtCurrentTime: '📝 Add Note at Current Time',
+        writeNoteHere: 'Write your note here...',
+        noNotesYet: 'No notes yet. Add a note using the form above.',
+        loadAudioToStart: 'Load an audio file to start taking notes',
+
+        // Profile management
+        profileManagement: 'Profile Management',
+        createNewProfile: 'Create New Profile',
+        existingProfiles: 'Existing Profiles',
+        profileName: 'Profile name...',
+        create: 'Create',
+        selectProfile: 'Select Profile...',
+        noProfilesYet: 'No profiles yet',
+        admin: 'Admin',
+        created: 'Created',
+
+        // Messages
+        enterProfileName: 'Please enter a profile name',
+        setPassword: 'Set a password for this profile:',
+        passwordRequired: 'Password is required',
+        passwordMinLength: 'Password must be at least 4 characters',
+        confirmPassword: 'Confirm password:',
+        passwordsNoMatch: 'Passwords do not match',
+        incorrectPassword: 'Incorrect password',
+        enterProfilePassword: 'Enter profile password:',
+        adminProfileCreated: 'Admin profile created successfully! This profile can upload audio files.',
+        profileCreated: 'Profile created successfully!',
+        deleteProfilePassword: 'Enter profile password to delete:',
+        deleteProfileConfirm: 'Delete this profile and all its notes? This cannot be undone.',
+        profileDeleted: 'Profile deleted successfully!',
+
+        // File operations
+        loadingCloudFiles: 'Loading cloud files...',
+        foundCloudFiles: 'Found {count} cloud files in {folders} folders',
+        failedLoadCloudFiles: 'Failed to load cloud files',
+        loadingFile: 'Loading cloud file...',
+        fileLoadedSuccess: 'Cloud file loaded successfully',
+        downloading: 'Downloading file...',
+        downloadSuccess: 'File downloaded successfully',
+        deletingFile: 'Deleting file...',
+        deleteFileConfirm: 'Are you sure you want to delete "{file}" from cloud storage?',
+        fileDeletedSuccess: 'File deleted successfully',
+
+        // Upload messages
+        onlyAdminUpload: 'Only admin profiles can upload files',
+        noAudioFilesFound: 'No audio files found in the selected folder.',
+        uploadingFile: 'Uploading... ({index}/{total})',
+        preparingUpload: 'Preparing upload...',
+        uploadCompleted: 'Upload completed!',
+        uploadFailed: 'Upload failed',
+
+        // Notes operations
+        selectProfileFirst: 'Please select a profile first',
+        enterNoteBeforeAdding: 'Please enter a note before adding.',
+        deleteNoteConfirm: 'Are you sure you want to delete this note?',
+        noteCannotBeEmpty: 'Note cannot be empty.',
+
+        // Export/Import
+        noNotesToExport: 'No notes to export.',
+        importNotesConfirm: 'Import {count} notes? This will add them to the current profile.',
+        notesImportedSuccess: '{count} notes imported successfully!',
+        invalidNotesFormat: 'Invalid notes file format.',
+        unsupportedFormat: 'Unsupported file format. Please use JSON files for import.',
+
+        // Clear data
+        clearAllDataConfirm: 'Are you sure you want to clear ALL data for profile "{profile}"?\n\nThis will permanently delete:\n- {files} audio files\n- {notes} total notes\n\nThis action cannot be undone.',
+        finalWarning: 'This is your final warning. All notes for this profile will be permanently deleted. Continue?',
+        noDataToClear: 'No data found to clear.',
+        dataCleared: 'All data cleared! {count} notes removed.',
+
+        // Status messages
+        alreadyRefreshing: 'Already refreshing...',
+        notConnectedToCloud: 'Not connected to cloud storage',
+        preparingExport: 'Preparing export...',
+        exportCompleted: 'Export completed! {count} files exported.',
+        readingImportFile: 'Reading import file...',
+        importCompleted: 'Import completed! {files} files and {notes} notes imported.',
+        clearingData: 'Clearing all data...',
+
+        // Errors
+        errorVerifyingPassword: 'Error verifying password',
+        errorCreatingProfile: 'Failed to create profile',
+        errorDeletingProfile: 'Failed to delete profile',
+        errorLoadingProfiles: 'Failed to load profiles',
+        errorAddingNote: 'Failed to add note',
+        errorDeletingNote: 'Failed to delete note',
+        errorUpdatingNote: 'Failed to update note',
+        errorLoadingAudio: 'Error loading audio file. Please try again.',
+        invalidAudioFile: 'Please select a valid audio file. Selected file type: {type}',
+
+        // Upload restriction notice
+        uploadRestrictionNotice: 'Note: Only admin profiles can upload new audio files. You can browse and play all uploaded files.'
+    },
+    ar: {
+        // Header
+        appTitle: 'ملاحظات صوتية',
+        manageProfiles: 'إدارة الملفات الشخصية',
+        showManagement: 'إظهار الإدارة',
+        hideManagement: 'إخفاء الإدارة',
+        darkMode: '🌙 الوضع الداكن',
+        lightMode: '☀️ الوضع الفاتح',
+        arabic: '🌐 العربية',
+        english: '🌐 English',
+
+        // Cloud status
+        cloudConnected: 'متصل بالسحابة',
+        cloudDisconnected: 'غير متصل بالسحابة',
+        connecting: 'جاري الاتصال...',
+
+        // Cloud storage
+        cloudStorage: 'التخزين السحابي',
+        uploadAudioFiles: 'رفع الملفات الصوتية',
+        uploadFiles: '☁️ رفع الملفات',
+        uploadFolder: '📂 رفع مجلد',
+        refresh: '🔄 تحديث',
+        folders: 'المجلدات',
+        noFoldersFound: 'لا توجد مجلدات',
+        root: 'الجذر',
+        noFilesInFolder: 'لا توجد ملفات في هذا المجلد',
+
+        // Data management
+        dataManagement: 'إدارة البيانات',
+        exportFormat: 'تنسيق التصدير',
+        exportScope: 'نطاق التصدير',
+        actions: 'الإجراءات',
+        exportData: '📤 تصدير البيانات',
+        importData: '📥 استيراد البيانات',
+        clearAll: '🗑️ مسح الكل',
+        jsonComplete: 'JSON (البيانات الكاملة)',
+        csvNotes: 'CSV (الملاحظات فقط)',
+        txtNotes: 'نص (الملاحظات فقط)',
+        markdown: 'Markdown (منسق)',
+        currentFileOnly: 'الملف الحالي فقط',
+        allAudioFiles: 'جميع الملفات الصوتية',
+        selectedFiles: 'الملفات المحددة',
+
+        // Audio controls
+        selectAudioFile: '📁 اختر ملف صوتي',
+        selectFolder: '📂 اختر مجلد',
+        currentFolder: 'المجلد الحالي',
+        currentFile: 'الملف الحالي',
+        previous: '⬅️ السابق',
+        next: '➡️ التالي',
+
+        // Notes
+        notes: 'الملاحظات',
+        export: '📤 تصدير',
+        import: '📥 استيراد',
+        addNoteAtCurrentTime: '📝 إضافة ملاحظة في الوقت الحالي',
+        writeNoteHere: 'اكتب ملاحظتك هنا...',
+        noNotesYet: 'لا توجد ملاحظات بعد. أضف ملاحظة باستخدام النموذج أعلاه.',
+        loadAudioToStart: 'قم بتحميل ملف صوتي لبدء تدوين الملاحظات',
+
+        // Profile management
+        profileManagement: 'إدارة الملفات الشخصية',
+        createNewProfile: 'إنشاء ملف شخصي جديد',
+        existingProfiles: 'الملفات الشخصية الموجودة',
+        profileName: 'اسم الملف الشخصي...',
+        create: 'إنشاء',
+        selectProfile: 'اختر ملف شخصي...',
+        noProfilesYet: 'لا توجد ملفات شخصية بعد',
+        admin: 'مسؤول',
+        created: 'تاريخ الإنشاء',
+
+        // Messages
+        enterProfileName: 'يرجى إدخال اسم الملف الشخصي',
+        setPassword: 'قم بتعيين كلمة مرور لهذا الملف الشخصي:',
+        passwordRequired: 'كلمة المرور مطلوبة',
+        passwordMinLength: 'يجب أن تكون كلمة المرور 4 أحرف على الأقل',
+        confirmPassword: 'تأكيد كلمة المرور:',
+        passwordsNoMatch: 'كلمات المرور غير متطابقة',
+        incorrectPassword: 'كلمة مرور خاطئة',
+        enterProfilePassword: 'أدخل كلمة مرور الملف الشخصي:',
+        adminProfileCreated: 'تم إنشاء ملف المسؤول بنجاح! يمكن لهذا الملف رفع الملفات الصوتية.',
+        profileCreated: 'تم إنشاء الملف الشخصي بنجاح!',
+        deleteProfilePassword: 'أدخل كلمة مرور الملف الشخصي للحذف:',
+        deleteProfileConfirm: 'حذف هذا الملف الشخصي وجميع ملاحظاته؟ لا يمكن التراجع عن هذا.',
+        profileDeleted: 'تم حذف الملف الشخصي بنجاح!',
+
+        // File operations
+        loadingCloudFiles: 'جاري تحميل الملفات السحابية...',
+        foundCloudFiles: 'تم العثور على {count} ملفات سحابية في {folders} مجلد',
+        failedLoadCloudFiles: 'فشل تحميل الملفات السحابية',
+        loadingFile: 'جاري تحميل الملف السحابي...',
+        fileLoadedSuccess: 'تم تحميل الملف السحابي بنجاح',
+        downloading: 'جاري التنزيل...',
+        downloadSuccess: 'تم تنزيل الملف بنجاح',
+        deletingFile: 'جاري حذف الملف...',
+        deleteFileConfirm: 'هل أنت متأكد من حذف "{file}" من التخزين السحابي؟',
+        fileDeletedSuccess: 'تم حذف الملف بنجاح',
+
+        // Upload messages
+        onlyAdminUpload: 'يمكن للملفات الشخصية الإدارية فقط رفع الملفات',
+        noAudioFilesFound: 'لم يتم العثور على ملفات صوتية في المجلد المحدد.',
+        uploadingFile: 'جاري الرفع... ({index}/{total})',
+        preparingUpload: 'جاري التحضير للرفع...',
+        uploadCompleted: 'اكتمل الرفع!',
+        uploadFailed: 'فشل الرفع',
+
+        // Notes operations
+        selectProfileFirst: 'يرجى اختيار ملف شخصي أولاً',
+        enterNoteBeforeAdding: 'يرجى إدخال ملاحظة قبل الإضافة.',
+        deleteNoteConfirm: 'هل أنت متأكد من حذف هذه الملاحظة؟',
+        noteCannotBeEmpty: 'لا يمكن أن تكون الملاحظة فارغة.',
+
+        // Export/Import
+        noNotesToExport: 'لا توجد ملاحظات للتصدير.',
+        importNotesConfirm: 'استيراد {count} ملاحظة؟ سيتم إضافتها إلى الملف الشخصي الحالي.',
+        notesImportedSuccess: 'تم استيراد {count} ملاحظة بنجاح!',
+        invalidNotesFormat: 'تنسيق ملف الملاحظات غير صالح.',
+        unsupportedFormat: 'تنسيق ملف غير مدعوم. يرجى استخدام ملفات JSON للاستيراد.',
+
+        // Clear data
+        clearAllDataConfirm: 'هل أنت متأكد من مسح جميع البيانات للملف الشخصي "{profile}"؟\n\nسيحذف هذا نهائياً:\n- {files} ملف صوتي\n- {notes} إجمالي الملاحظات\n\nلا يمكن التراجع عن هذا الإجراء.',
+        finalWarning: 'هذا تحذيرك الأخير. سيتم حذف جميع الملاحظات لهذا الملف الشخصي نهائياً. هل تريد المتابعة؟',
+        noDataToClear: 'لم يتم العثور على بيانات للمسح.',
+        dataCleared: 'تم مسح جميع البيانات! تمت إزالة {count} ملاحظة.',
+
+        // Status messages
+        alreadyRefreshing: 'جاري التحديث بالفعل...',
+        notConnectedToCloud: 'غير متصل بالتخزين السحابي',
+        preparingExport: 'جاري تحضير التصدير...',
+        exportCompleted: 'اكتمل التصدير! تم تصدير {count} ملف.',
+        readingImportFile: 'جاري قراءة ملف الاستيراد...',
+        importCompleted: 'اكتمل الاستيراد! {files} ملف و {notes} ملاحظة تم استيرادها.',
+        clearingData: 'جاري مسح جميع البيانات...',
+
+        // Errors
+        errorVerifyingPassword: 'خطأ في التحقق من كلمة المرور',
+        errorCreatingProfile: 'فشل إنشاء الملف الشخصي',
+        errorDeletingProfile: 'فشل حذف الملف الشخصي',
+        errorLoadingProfiles: 'فشل تحميل الملفات الشخصية',
+        errorAddingNote: 'فشل إضافة الملاحظة',
+        errorDeletingNote: 'فشل حذف الملاحظة',
+        errorUpdatingNote: 'فشل تحديث الملاحظة',
+        errorLoadingAudio: 'خطأ في تحميل الملف الصوتي. يرجى المحاولة مرة أخرى.',
+        invalidAudioFile: 'يرجى اختيار ملف صوتي صالح. نوع الملف المحدد: {type}',
+
+        // Upload restriction notice
+        uploadRestrictionNotice: 'ملاحظة: يمكن للملفات الشخصية الإدارية فقط رفع ملفات صوتية جديدة. يمكنك تصفح وتشغيل جميع الملفات المرفوعة.'
+    }
+};
+
+// Translation helper
+function t(key, replacements = {}) {
+    let text = translations[currentLanguage][key] || translations['en'][key] || key;
+
+    Object.keys(replacements).forEach(placeholder => {
+        text = text.replace(`{${placeholder}}`, replacements[placeholder]);
+    });
+
+    return text;
+}
+
+// Simple hash function
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return hash.toString();
+}
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function () {
+    loadLanguage();
     loadTheme();
     setupEventListeners();
     initializeSupabase();
@@ -33,7 +360,6 @@ async function initializeSupabase() {
     try {
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Test connection
         const { data, error } = await supabase.storage.listBuckets();
 
         if (error) {
@@ -41,15 +367,182 @@ async function initializeSupabase() {
         }
 
         isCloudConnected = true;
-        updateCloudStatus('connected', 'Cloud Connected');
+        updateCloudStatus('connected', t('cloudConnected'));
         await refreshCloudFiles();
         await loadProfiles();
+        updateUploadButtonsVisibility();
+        updateUITexts();
 
     } catch (error) {
         console.error('Supabase initialization error:', error);
         isCloudConnected = false;
-        updateCloudStatus('disconnected', 'Cloud Disconnected');
+        updateCloudStatus('disconnected', t('cloudDisconnected'));
     }
+}
+
+// Language functions
+function toggleLanguage() {
+    currentLanguage = currentLanguage === 'en' ? 'ar' : 'en';
+
+    document.body.setAttribute('dir', currentLanguage === 'ar' ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', currentLanguage);
+
+    try {
+        localStorage.setItem('audioNotes_language', currentLanguage);
+    } catch (e) {
+        console.log('Could not save language preference');
+    }
+
+    updateUITexts();
+}
+
+function loadLanguage() {
+    try {
+        const savedLanguage = localStorage.getItem('audioNotes_language');
+        if (savedLanguage) {
+            currentLanguage = savedLanguage;
+            document.body.setAttribute('dir', currentLanguage === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.setAttribute('lang', currentLanguage);
+        }
+    } catch (e) {
+        console.log('Could not load language preference');
+    }
+}
+
+function updateUITexts() {
+    // Update all UI elements with translations
+    document.querySelector('.header h1').innerHTML = `<img src="logo.png" alt="Logo" class="logo-icon"> ${t('appTitle')}`;
+
+    // Buttons
+    const manageProfilesBtn = document.querySelector('button[onclick="openProfileManager()"]');
+    if (manageProfilesBtn) manageProfilesBtn.textContent = `👤 ${t('manageProfiles')}`;
+
+    const togglePanelsBtn = document.getElementById('togglePanelsBtn');
+    if (togglePanelsBtn) {
+        const isHidden = document.querySelector('.cloud-section').classList.contains('hidden');
+        togglePanelsBtn.textContent = `⚙️ ${isHidden ? t('showManagement') : t('hideManagement')}`;
+    }
+
+    const languageBtn = document.getElementById('languageBtn');
+    if (languageBtn) languageBtn.textContent = currentLanguage === 'en' ? t('arabic') : t('english');
+
+    const themeToggle = document.querySelector('.theme-toggle');
+    if (themeToggle) {
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        themeToggle.textContent = isDark ? t('lightMode') : t('darkMode');
+    }
+
+    // Cloud section
+    const cloudSection = document.querySelector('.cloud-section');
+    if (cloudSection) {
+        cloudSection.querySelector('h3').textContent = `☁️ ${t('cloudStorage')}`;
+
+        // Add upload restriction notice if not admin
+        const currentProfile = profiles.find(p => p.id === currentProfileId);
+        const isAdmin = currentProfile?.is_admin || false;
+
+        let noticeDiv = cloudSection.querySelector('.upload-restriction-notice');
+        if (!isAdmin && currentProfileId) {
+            if (!noticeDiv) {
+                noticeDiv = document.createElement('div');
+                noticeDiv.className = 'upload-restriction-notice';
+                cloudSection.insertBefore(noticeDiv, cloudSection.querySelector('.data-management-controls'));
+            }
+            noticeDiv.textContent = t('uploadRestrictionNotice');
+        } else if (noticeDiv) {
+            noticeDiv.remove();
+        }
+
+        const uploadLabel = cloudSection.querySelector('label[for="cloudAudioFile"]');
+        if (uploadLabel) uploadLabel.textContent = t('uploadFiles');
+
+        const folderLabel = cloudSection.querySelector('label[for="cloudFolderInput"]');
+        if (folderLabel) folderLabel.textContent = t('uploadFolder');
+
+        const refreshBtn = cloudSection.querySelector('button[onclick="refreshCloudFiles()"]');
+        if (refreshBtn) refreshBtn.textContent = t('refresh');
+    }
+
+    // Data management section
+    const dataSection = document.querySelector('.data-management-section');
+    if (dataSection) {
+        dataSection.querySelector('h3').textContent = `📊 ${t('dataManagement')}`;
+
+        const exportFormatLabel = dataSection.querySelector('label[for="exportFormat"]');
+        if (exportFormatLabel) exportFormatLabel.textContent = t('exportFormat');
+
+        const exportScopeLabel = dataSection.querySelector('label[for="exportScope"]');
+        if (exportScopeLabel) exportScopeLabel.textContent = t('exportScope');
+
+        const exportBtn = dataSection.querySelector('button[onclick="exportAllData()"]');
+        if (exportBtn) exportBtn.textContent = t('exportData');
+
+        const importLabel = dataSection.querySelector('label[for="importAllDataFile"]');
+        if (importLabel) importLabel.textContent = t('importData');
+
+        const clearBtn = dataSection.querySelector('button[onclick="clearAllData()"]');
+        if (clearBtn) clearBtn.textContent = t('clearAll');
+    }
+
+    // Audio section
+    const audioSection = document.querySelector('.audio-section');
+    if (audioSection) {
+        const fileLabel = audioSection.querySelector('label[for="audioFile"]');
+        if (fileLabel) fileLabel.textContent = t('selectAudioFile');
+
+        const folderLabel = audioSection.querySelector('label[for="folderInput"]');
+        if (folderLabel) folderLabel.textContent = t('selectFolder');
+
+        const prevBtn = audioSection.querySelector('button[onclick="playPreviousAudio()"]');
+        if (prevBtn) prevBtn.textContent = t('previous');
+
+        const nextBtn = audioSection.querySelector('button[onclick="playNextAudio()"]');
+        if (nextBtn) nextBtn.textContent = t('next');
+
+        const noteInput = document.getElementById('noteInput');
+        if (noteInput) noteInput.setAttribute('placeholder', t('writeNoteHere'));
+
+        const addNoteBtn = document.getElementById('addNoteBtn');
+        if (addNoteBtn) addNoteBtn.textContent = t('addNoteAtCurrentTime');
+    }
+
+    // Notes sidebar
+    const notesSidebar = document.querySelector('.notes-sidebar');
+    if (notesSidebar) {
+        notesSidebar.querySelector('h3').textContent = `📋 ${t('notes')}`;
+
+        const exportBtn = notesSidebar.querySelector('button[onclick="exportNotes()"]');
+        if (exportBtn) exportBtn.textContent = t('export');
+
+        const importLabel = notesSidebar.querySelector('label[for="importFile"]');
+        if (importLabel) importLabel.textContent = t('import');
+    }
+
+    // Update select options
+    const exportFormat = document.getElementById('exportFormat');
+    if (exportFormat) {
+        exportFormat.innerHTML = `
+            <option value="json">${t('jsonComplete')}</option>
+            <option value="csv">${t('csvNotes')}</option>
+            <option value="txt">${t('txtNotes')}</option>
+            <option value="markdown">${t('markdown')}</option>
+        `;
+    }
+
+    const exportScope = document.getElementById('exportScope');
+    if (exportScope) {
+        exportScope.innerHTML = `
+            <option value="current">${t('currentFileOnly')}</option>
+            <option value="all">${t('allAudioFiles')}</option>
+            <option value="selected">${t('selectedFiles')}</option>
+        `;
+    }
+
+    // Update folder tree
+    renderCloudFolderTree();
+    renderCloudFiles();
+    renderNotes();
+    updateFolderDisplay();
 }
 
 // Profile Management Functions
@@ -59,21 +552,35 @@ async function loadProfiles() {
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id, name, is_admin, created_at')
             .order('created_at', { ascending: true });
 
         if (error) throw error;
 
         profiles = data || [];
+
+        // Load stored passwords from memory storage
+        try {
+            const stored = localStorage.getItem('audioNotes_sessionPasswords');
+            if (stored) {
+                sessionPasswords = JSON.parse(stored);
+            }
+        } catch (e) {
+            console.log('Could not load session passwords');
+        }
+
         renderProfileSelect();
 
-        // Load last used profile
+        // Load last used profile if password is stored
         const lastProfileId = localStorage.getItem('lastProfileId');
         if (lastProfileId && profiles.find(p => p.id === lastProfileId)) {
-            currentProfileId = lastProfileId;
-            document.getElementById('profileSelect').value = lastProfileId;
-            if (currentFileName) {
-                await loadNotesForProfile();
+            if (sessionPasswords[lastProfileId]) {
+                currentProfileId = lastProfileId;
+                currentProfilePassword = sessionPasswords[lastProfileId];
+                document.getElementById('profileSelect').value = lastProfileId;
+                if (currentFileName) {
+                    await loadNotesForProfile();
+                }
             }
         }
     } catch (error) {
@@ -87,7 +594,7 @@ function renderProfileSelect() {
     const currentValue = select.value;
 
     select.innerHTML = '<option value="">Select Profile...</option>' +
-        profiles.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+        profiles.map(p => `<option value="${p.id}">${escapeHtml(p.name)}${p.is_admin ? ' 👑' : ''}</option>`).join('');
 
     if (currentValue) {
         select.value = currentValue;
@@ -96,16 +603,75 @@ function renderProfileSelect() {
 
 async function switchProfile() {
     const select = document.getElementById('profileSelect');
-    currentProfileId = select.value || null;
+    const selectedId = select.value;
 
-    if (currentProfileId) {
-        localStorage.setItem('lastProfileId', currentProfileId);
-        await loadNotesForProfile();
-    } else {
+    if (!selectedId) {
+        currentProfileId = null;
+        currentProfilePassword = null;
         localStorage.removeItem('lastProfileId');
         notes = [];
         renderNotes();
+        updateUploadButtonsVisibility();
+        return;
     }
+
+    // Check if password is already in session
+    if (sessionPasswords[selectedId]) {
+        currentProfileId = selectedId;
+        currentProfilePassword = sessionPasswords[selectedId];
+        localStorage.setItem('lastProfileId', selectedId);
+
+        // Clear notes first to avoid showing old profile's notes
+        notes = [];
+        renderNotes();
+
+        // Then load new profile's notes
+        await loadNotesForProfile();
+        updateUploadButtonsVisibility();
+        return;
+    }
+
+    // Request password
+    const password = prompt('Enter profile password:');
+    if (!password) {
+        select.value = currentProfileId || '';
+        return;
+    }
+
+    // Verify password
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('password_hash')
+        .eq('id', selectedId)
+        .single();
+
+    if (error || !data) {
+        alert('Error verifying password');
+        select.value = currentProfileId || '';
+        return;
+    }
+
+    if (data.password_hash !== simpleHash(password)) {
+        alert('Incorrect password');
+        select.value = currentProfileId || '';
+        return;
+    }
+
+    // Password correct
+    currentProfileId = selectedId;
+    currentProfilePassword = password;
+    sessionPasswords[selectedId] = password;
+
+    // Save to memory storage
+    try {
+        localStorage.setItem('audioNotes_sessionPasswords', JSON.stringify(sessionPasswords));
+        localStorage.setItem('lastProfileId', selectedId);
+    } catch (e) {
+        console.log('Could not save session');
+    }
+
+    await loadNotesForProfile();
+    updateUploadButtonsVisibility();
 }
 
 async function loadNotesForProfile() {
@@ -143,7 +709,15 @@ async function loadNotesForProfile() {
 }
 
 function openProfileManager() {
-    document.getElementById('profileModal').style.display = 'flex';
+    const modal = document.getElementById('profileModal');
+    modal.style.display = 'flex';
+
+    // Update modal texts
+    modal.querySelector('.modal-header h3').textContent = t('profileManagement');
+    modal.querySelector('label').textContent = t('createNewProfile');
+    modal.querySelector('#newProfileName').placeholder = t('profileName');
+    modal.querySelector('button[onclick="createProfile()"]').textContent = t('create');
+
     renderProfilesList();
 }
 
@@ -155,23 +729,24 @@ function renderProfilesList() {
     const list = document.getElementById('profilesList');
 
     if (profiles.length === 0) {
-        list.innerHTML = '<div class="empty-state">No profiles yet</div>';
+        list.innerHTML = `<div class="empty-state">${t('noProfilesYet')}</div>`;
         return;
     }
 
     list.innerHTML = profiles.map(profile => `
-        <div class="profile-list-item">
-            <div>
-                <strong>${escapeHtml(profile.name)}</strong>
-                <div style="font-size: 12px; color: var(--text-secondary);">
-                    Created: ${new Date(profile.created_at).toLocaleDateString()}
-                </div>
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn-icon" onclick="deleteProfile('${profile.id}')" title="Delete">🗑️</button>
+    <div class="profile-list-item">
+        <div>
+            <strong>${escapeHtml(profile.name)}</strong>
+            ${profile.is_admin ? `<span style="color: var(--warning-color); margin-left: 8px;">${t('admin')}</span>` : ''}
+            <div style="font-size: 12px; color: var(--text-secondary);">
+                ${t('created')}: ${new Date(profile.created_at).toLocaleDateString()}
             </div>
         </div>
-    `).join('');
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-icon" onclick="deleteProfile('${profile.id}')" title="Delete">🗑️</button>
+        </div>
+    </div>
+`).join('');
 }
 
 async function createProfile() {
@@ -183,26 +758,64 @@ async function createProfile() {
         return;
     }
 
+    const password = prompt('Set a password for this profile:');
+    if (!password) {
+        alert('Password is required');
+        return;
+    }
+
+    if (password.length < 4) {
+        alert('Password must be at least 4 characters');
+        return;
+    }
+
+    const confirmPassword = prompt('Confirm password:');
+    if (password !== confirmPassword) {
+        alert('Passwords do not match');
+        return;
+    }
+
     if (!isCloudConnected) {
         alert('Not connected to cloud storage');
         return;
     }
 
     try {
+        // Check if this is the first profile (admin)
+        const isFirstProfile = profiles.length === 0;
+
         const { data, error } = await supabase
             .from('profiles')
-            .insert([{ name }])
+            .insert([{
+                name,
+                password_hash: simpleHash(password),
+                is_admin: isFirstProfile
+            }])
             .select()
             .single();
 
         if (error) throw error;
 
         profiles.push(data);
+        sessionPasswords[data.id] = password;
+
+        // Save to memory storage
+        try {
+            localStorage.setItem('audioNotes_sessionPasswords', JSON.stringify(sessionPasswords));
+        } catch (e) {
+            console.log('Could not save session');
+        }
+
         renderProfileSelect();
         renderProfilesList();
 
         input.value = '';
-        alert('Profile created successfully!');
+
+        if (isFirstProfile) {
+            alert('Admin profile created successfully! This profile can upload audio files.');
+        } else {
+            alert('Profile created successfully!');
+        }
     } catch (error) {
         console.error('Error creating profile:', error);
         alert('Failed to create profile: ' + error.message);
@@ -210,6 +823,23 @@ async function createProfile() {
 }
 
 async function deleteProfile(profileId) {
+    // Verify password first
+    if (!sessionPasswords[profileId]) {
+        const password = prompt('Enter profile password to delete:');
+        if (!password) return;
+
+        const { data } = await supabase
+            .from('profiles')
+            .select('password_hash')
+            .eq('id', profileId)
+            .single();
+
+        if (!data || data.password_hash !== simpleHash(password)) {
+            alert('Incorrect password');
+            return;
+        }
+    }
+
     if (!confirm('Delete this profile and all its notes? This cannot be undone.')) {
         return;
     }
@@ -223,13 +853,22 @@ async function deleteProfile(profileId) {
         if (error) throw error;
 
         profiles = profiles.filter(p => p.id !== profileId);
+        delete sessionPasswords[profileId];
+
+        try {
+            localStorage.setItem('audioNotes_sessionPasswords', JSON.stringify(sessionPasswords));
+        } catch (e) {
+            console.log('Could not update session');
+        }
 
         if (currentProfileId === profileId) {
             currentProfileId = null;
+            currentProfilePassword = null;
             document.getElementById('profileSelect').value = '';
             localStorage.removeItem('lastProfileId');
             notes = [];
             renderNotes();
+            updateUploadButtonsVisibility();
         }
 
         renderProfileSelect();
@@ -239,6 +878,31 @@ async function deleteProfile(profileId) {
     } catch (error) {
         console.error('Error deleting profile:', error);
         alert('Failed to delete profile: ' + error.message);
+    }
+}
+
+function updateUploadButtonsVisibility() {
+    const currentProfile = profiles.find(p => p.id === currentProfileId);
+    const isAdmin = currentProfile?.is_admin || false;
+
+    // Upload controls - only for admin
+    const uploadControls = document.querySelectorAll('#cloudAudioFile, #cloudFolderInput');
+    uploadControls.forEach(control => {
+        const wrapper = control.closest('.file-input-wrapper');
+        if (wrapper) {
+            if (isAdmin && currentProfileId) {
+                wrapper.style.display = 'inline-block';
+            } else {
+                wrapper.style.display = 'none';
+            }
+        }
+    });
+
+    // Cloud section - always visible for browsing
+    const cloudSection = document.querySelector('.cloud-section');
+    if (cloudSection) {
+        cloudSection.style.opacity = '1';
+        cloudSection.style.pointerEvents = 'auto';
     }
 }
 
@@ -252,23 +916,20 @@ function updateCloudStatus(status, text) {
 }
 
 async function refreshCloudFiles() {
-    let isRefreshing = false;
-    if (isRefreshing || !isCloudConnected) {
-        if (isRefreshing) {
-            showCloudStatus('info', 'Already refreshing...');
-        }
+    if (!isCloudConnected) {
+        showCloudStatus('error', t('notConnectedToCloud'));
+        return;
+    }
+
+    if (isRefreshing) {
+        showCloudStatus('info', t('alreadyRefreshing'));
         return;
     }
 
     isRefreshing = true;
 
-    if (!isCloudConnected) {
-        showCloudStatus('error', 'Not connected to cloud storage');
-        return;
-    }
-
     try {
-        showCloudStatus('info', 'Loading cloud files...');
+        showCloudStatus('info', t('loadingCloudFiles'));
 
         const { data, error } = await supabase.storage
             .from('audio-files')
@@ -278,9 +939,7 @@ async function refreshCloudFiles() {
                 sortBy: { column: 'name', order: 'asc' }
             });
 
-        if (error) {
-            throw error;
-        }
+        if (error) throw error;
 
         cloudFiles = [];
         cloudFolders.clear();
@@ -289,21 +948,27 @@ async function refreshCloudFiles() {
 
         renderCloudFolderTree();
         renderCloudFiles();
-        showCloudStatus('success', `Found ${cloudFiles.length} cloud files in ${cloudFolders.size} folders`);
+
+        showCloudStatus('success', t('foundCloudFiles', {
+            count: cloudFiles.length,
+            folders: cloudFolders.size
+        }));
 
         setTimeout(() => hideCloudStatus(), 3000);
 
     } catch (error) {
         console.error('Error loading cloud files:', error);
-        showCloudStatus('error', 'Failed to load cloud files: ' + error.message);
+        showCloudStatus('error', t('failedLoadCloudFiles'));
         cloudFiles = [];
         cloudFolders.clear();
         renderCloudFolderTree();
         renderCloudFiles();
     } finally {
+        // Always reset the flag when done
         isRefreshing = false;
     }
 }
+
 
 async function processCloudFiles(items, currentPath) {
     for (const item of items) {
@@ -352,17 +1017,17 @@ function renderCloudFolderTree() {
     const sortedFolders = Array.from(cloudFolders).sort();
 
     folderTree.innerHTML = `
-        <div class="cloud-folder-item ${currentCloudFolder === '' ? 'active' : ''}" onclick="navigateToCloudFolder('')">
-            <span class="cloud-folder-icon">🏠</span>
-            <span class="cloud-folder-name">Root</span>
-        </div>
-        ${sortedFolders.map(folder => `
-            <div class="cloud-folder-item ${currentCloudFolder === folder ? 'active' : ''}" onclick="navigateToCloudFolder('${escapeHtml(folder).replace(/'/g, '\\\'')}')" title="${escapeHtml(folder)}">
-                <span class="cloud-folder-icon">📁</span>
-                <span class="cloud-folder-name">${escapeHtml(folder.split('/').pop())}</span>
+            <div class="cloud-folder-item ${currentCloudFolder === '' ? 'active' : ''}" onclick="navigateToCloudFolder('')">
+                <span class="cloud-folder-icon">🏠</span>
+                <span class="cloud-folder-name">Root</span>
             </div>
-        `).join('')}
-    `;
+            ${sortedFolders.map(folder => `
+                <div class="cloud-folder-item ${currentCloudFolder === folder ? 'active' : ''}" onclick="navigateToCloudFolder('${escapeHtml(folder).replace(/'/g, '\\\'')}')" title="${escapeHtml(folder)}">
+                    <span class="cloud-folder-icon">📁</span>
+                    <span class="cloud-folder-name">${escapeHtml(folder.split('/').pop())}</span>
+                </div>
+            `).join('')}
+        `;
 }
 
 function navigateToCloudFolder(folderPath) {
@@ -388,9 +1053,9 @@ function updateCloudBreadcrumb() {
     pathParts.forEach((part, index) => {
         currentPath += (currentPath ? '/' : '') + part;
         breadcrumbHTML += `
-            <span class="breadcrumb-separator">›</span>
-            <span class="breadcrumb-item" onclick="navigateToCloudFolder('${escapeHtml(currentPath).replace(/'/g, '\\\'')}')">${escapeHtml(part)}</span>
-        `;
+                <span class="breadcrumb-separator">›</span>
+                <span class="breadcrumb-item" onclick="navigateToCloudFolder('${escapeHtml(currentPath).replace(/'/g, '\\\'')}')">${escapeHtml(part)}</span>
+            `;
     });
 
     breadcrumb.innerHTML = breadcrumbHTML;
@@ -407,21 +1072,21 @@ function renderCloudFiles() {
     }
 
     cloudFilesList.innerHTML = filteredFiles.map(file => `
-        <div class="cloud-file-item">
-            <div class="cloud-file-info">
-                <div class="cloud-file-name">${escapeHtml(file.name)}</div>
-                <div class="cloud-file-meta">
-                    ${formatFileSize(file.metadata?.size || 0)} • 
-                    ${new Date(file.updated_at || file.created_at).toLocaleDateString()}
+            <div class="cloud-file-item">
+                <div class="cloud-file-info">
+                    <div class="cloud-file-name">${escapeHtml(file.name)}</div>
+                    <div class="cloud-file-meta">
+                        ${formatFileSize(file.metadata?.size || 0)} • 
+                        ${new Date(file.updated_at || file.created_at).toLocaleDateString()}
+                    </div>
+                </div>
+                <div class="cloud-file-actions">
+                    <button class="btn-icon" onclick="loadCloudFile('${escapeHtml(file.fullPath).replace(/'/g, '\\\'')}')" title="Load">▶️</button>
+                    <button class="btn-icon" onclick="downloadCloudFile('${escapeHtml(file.fullPath).replace(/'/g, '\\\'')}')" title="Download">⬇️</button>
+                    <button class="btn-icon" onclick="deleteCloudFile('${escapeHtml(file.fullPath).replace(/'/g, '\\\'')}')" title="Delete">🗑️</button>
                 </div>
             </div>
-            <div class="cloud-file-actions">
-                <button class="btn-icon" onclick="loadCloudFile('${escapeHtml(file.fullPath).replace(/'/g, '\\\'')}')" title="Load">▶️</button>
-                <button class="btn-icon" onclick="downloadCloudFile('${escapeHtml(file.fullPath).replace(/'/g, '\\\'')}')" title="Download">⬇️</button>
-                <button class="btn-icon" onclick="deleteCloudFile('${escapeHtml(file.fullPath).replace(/'/g, '\\\'')}')" title="Delete">🗑️</button>
-            </div>
-        </div>
-    `).join('');
+        `).join('');
 }
 
 async function loadCloudFile(filePath) {
@@ -594,6 +1259,69 @@ function moveToTop(folderPath) {
     updateFolderDisplay();
 }
 
+// Audio Navigation Functions
+function playNextAudio() {
+    if (allFiles.length === 0 && cloudFiles.length === 0) return;
+
+    // Check if we're playing a cloud file
+    const currentCloudFile = cloudFiles.find(f => f.name === currentFileName);
+
+    if (currentCloudFile) {
+        // Navigate through cloud files
+        const currentIndex = cloudFiles.findIndex(f => f.name === currentFileName);
+        const nextIndex = (currentIndex + 1) % cloudFiles.length;
+        loadCloudFile(cloudFiles[nextIndex].fullPath);
+    } else {
+        // Navigate through local files
+        const currentIndex = allFiles.findIndex(f => f.name === currentFileName);
+        const nextIndex = (currentIndex + 1) % allFiles.length;
+        selectFile(nextIndex, getFolderForFile(allFiles[nextIndex]));
+    }
+}
+
+function playPreviousAudio() {
+    if (allFiles.length === 0 && cloudFiles.length === 0) return;
+
+    // Check if we're playing a cloud file
+    const currentCloudFile = cloudFiles.find(f => f.name === currentFileName);
+
+    if (currentCloudFile) {
+        // Navigate through cloud files
+        const currentIndex = cloudFiles.findIndex(f => f.name === currentFileName);
+        const prevIndex = currentIndex <= 0 ? cloudFiles.length - 1 : currentIndex - 1;
+        loadCloudFile(cloudFiles[prevIndex].fullPath);
+    } else {
+        // Navigate through local files
+        const currentIndex = allFiles.findIndex(f => f.name === currentFileName);
+        const prevIndex = currentIndex <= 0 ? allFiles.length - 1 : currentIndex - 1;
+        selectFile(prevIndex, getFolderForFile(allFiles[prevIndex]));
+    }
+}
+
+function getFolderForFile(file) {
+    for (const [folderPath, folderData] of Object.entries(folderStructure)) {
+        if (folderData._files && folderData._files.some(f => f.name === file.name)) {
+            return folderPath;
+        }
+        const nestedFolder = findFileInNestedFolders(folderData, file);
+        if (nestedFolder !== null) return nestedFolder;
+    }
+    return '';
+}
+
+function findFileInNestedFolders(obj, file) {
+    for (const [key, value] of Object.entries(obj)) {
+        if (key === '_files' && value.some(f => f.name === file.name)) {
+            return '';
+        }
+        if (typeof value === 'object' && key !== '_files') {
+            const result = findFileInNestedFolders(value, file);
+            if (result !== null) return result;
+        }
+    }
+    return null;
+}
+
 function setupEventListeners() {
     const audioFile = document.getElementById('audioFile');
     const folderInput = document.getElementById('folderInput');
@@ -629,6 +1357,14 @@ async function handleCloudUpload(event) {
         return;
     }
 
+    // Check if user is admin
+    const currentProfile = profiles.find(p => p.id === currentProfileId);
+    if (!currentProfile || !currentProfile.is_admin) {
+        alert('Only admin profiles can upload files');
+        event.target.value = '';
+        return;
+    }
+
     const uploadProgressDiv = document.getElementById('uploadProgress');
     uploadProgressDiv.style.display = 'block';
     uploadProgressDiv.innerHTML = '';
@@ -648,6 +1384,14 @@ async function handleCloudFolderUpload(event) {
 
     if (!isCloudConnected) {
         alert('Not connected to cloud storage');
+        event.target.value = '';
+        return;
+    }
+
+    // Check if user is admin
+    const currentProfile = profiles.find(p => p.id === currentProfileId);
+    if (!currentProfile || !currentProfile.is_admin) {
+        alert('Only admin profiles can upload files');
         event.target.value = '';
         return;
     }
@@ -680,14 +1424,14 @@ async function uploadFileToCloud(file, index, total, relativePath) {
     const uploadItem = document.createElement('div');
     uploadItem.className = 'upload-item';
     uploadItem.innerHTML = `
-        <div class="upload-info">
-            <div class="upload-name">${escapeHtml(relativePath || file.name)}</div>
-            <div class="upload-status">Uploading... (${index}/${total})</div>
-        </div>
-        <div class="progress-bar" style="width: 200px;">
-            <div class="progress-fill" style="width: 0%;"></div>
-        </div>
-    `;
+            <div class="upload-info">
+                <div class="upload-name">${escapeHtml(relativePath || file.name)}</div>
+                <div class="upload-status">Uploading... (${index}/${total})</div>
+            </div>
+            <div class="progress-bar" style="width: 200px;">
+                <div class="progress-fill" style="width: 0%;"></div>
+            </div>
+        `;
     uploadProgressDiv.appendChild(uploadItem);
 
     const progressFill = uploadItem.querySelector('.progress-fill');
@@ -879,32 +1623,32 @@ function renderFolderStructure(structure, container, path = '') {
         const folderId = `folder-${folder.fullPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
         const folderHeaderContent = `
-            <span>📁 ${escapeHtml(folder.path)}</span>
-            <div class="folder-move-controls">
-                ${folder.fullPath ? `<button class="btn-move" onclick="event.stopPropagation(); moveToTop('${escapeHtml(folder.fullPath).replace(/'/g, '\\\'')}')" title="Move to top">↑</button>` : ''}
-                <span class="folder-toggle">▼</span>
-            </div>
-        `;
+                <span>📁 ${escapeHtml(folder.path)}</span>
+                <div class="folder-move-controls">
+                    ${folder.fullPath ? `<button class="btn-move" onclick="event.stopPropagation(); moveToTop('${escapeHtml(folder.fullPath).replace(/'/g, '\\\'')}')" title="Move to top">↑</button>` : ''}
+                    <span class="folder-toggle">▼</span>
+                </div>
+            `;
 
         const folderFilesContent = folder.files.map((file, index) => {
             const fileIndex = getFileIndex(file);
             const isCloudFile = file.name && file.name.includes('_') && !isNaN(file.name.split('_')[0]);
             return `
-                <button class="file-tab ${file.name === currentFileName ? 'active' : ''} ${isCloudFile ? 'cloud-file' : ''}" 
-                        onclick="selectFile(${fileIndex}, '${escapeHtml(folder.fullPath).replace(/'/g, '\\\'')}')"
-                        title="${escapeHtml(file.name)}">
-                    ${escapeHtml(file.name)}
-                </button>
-            `;
+                    <button class="file-tab ${file.name === currentFileName ? 'active' : ''} ${isCloudFile ? 'cloud-file' : ''}" 
+                            onclick="selectFile(${fileIndex}, '${escapeHtml(folder.fullPath).replace(/'/g, '\\\'')}')"
+                            title="${escapeHtml(file.name)}">
+                        ${escapeHtml(file.name)}
+                    </button>
+                `;
         }).join('');
 
         folderSection.innerHTML = `
-            <div class="folder-header" onclick="toggleFolder('${folderId}')">
-                ${folderHeaderContent}
-            </div>
-            <div class="folder-files" id="${folderId}">
-                ${folderFilesContent}</div>
-        `;
+                <div class="folder-header" onclick="toggleFolder('${folderId}')">
+                    ${folderHeaderContent}
+                </div>
+                <div class="folder-files" id="${folderId}">
+                    ${folderFilesContent}</div>
+            `;
 
         container.appendChild(folderSection);
     });
@@ -937,7 +1681,12 @@ async function loadAudioFile(file) {
 
     if (currentAudio) {
         URL.revokeObjectURL(currentAudio);
+        currentAudio = null;
     }
+
+    audioPlayer.pause();
+    audioPlayer.src = '';
+    audioPlayer.load();
 
     try {
         currentAudio = URL.createObjectURL(file);
@@ -1163,20 +1912,20 @@ function renderNotes() {
     }
 
     notesList.innerHTML = notes.map(note => `
-        <div class="note-item" data-note-id="${note.id}">
-            <div class="note-timestamp" onclick="jumpToTime(${note.timestamp})">
-                ${escapeHtml(note.timeString)}
+            <div class="note-item" data-note-id="${note.id}">
+                <div class="note-timestamp" onclick="jumpToTime(${note.timestamp})">
+                    ${escapeHtml(note.timeString)}
+                </div>
+                <div class="note-text">${escapeHtml(note.text)}</div>
+                <textarea class="note-edit-input">${escapeHtml(note.text)}</textarea>
+                <div class="note-actions">
+                    <button class="btn-icon" onclick="editNote('${note.id}')" title="Edit">✏️</button>
+                    <button class="btn-icon" onclick="saveNote('${note.id}')" title="Save" style="display: none;">💾</button>
+                    <button class="btn-icon" onclick="cancelEdit('${note.id}')" title="Cancel" style="display: none;">❌</button>
+                    <button class="btn-icon" onclick="deleteNote('${note.id}')" title="Delete">🗑️</button>
+                </div>
             </div>
-            <div class="note-text">${escapeHtml(note.text)}</div>
-            <textarea class="note-edit-input">${escapeHtml(note.text)}</textarea>
-            <div class="note-actions">
-                <button class="btn-icon" onclick="editNote('${note.id}')" title="Edit">✏️</button>
-                <button class="btn-icon" onclick="saveNote('${note.id}')" title="Save" style="display: none;">💾</button>
-                <button class="btn-icon" onclick="cancelEdit('${note.id}')" title="Cancel" style="display: none;">❌</button>
-                <button class="btn-icon" onclick="deleteNote('${note.id}')" title="Delete">🗑️</button>
-            </div>
-        </div>
-    `).join('');
+        `).join('');
 
     notes.forEach(note => {
         const noteItem = document.querySelector(`[data-note-id="${note.id}"]`);
@@ -1185,13 +1934,23 @@ function renderNotes() {
         const editInput = noteItem.querySelector('.note-edit-input');
         if (!editInput) return;
 
-        editInput.addEventListener('keydown', (e) => {
+        // Remove old listener if it exists
+        const oldListener = editInput._keydownListener;
+        if (oldListener) {
+            editInput.removeEventListener('keydown', oldListener);
+        }
+
+        // Create new listener and save reference
+        const newListener = (e) => {
             if (e.key === 'Escape') {
                 cancelEdit(note.id);
             } else if (e.key === 'Enter' && e.ctrlKey) {
                 saveNote(note.id);
             }
-        });
+        };
+
+        editInput._keydownListener = newListener;
+        editInput.addEventListener('keydown', newListener);
     });
 }
 
@@ -1745,6 +2504,14 @@ document.addEventListener('keydown', function (e) {
             if (!isNaN(audioPlayer.duration)) {
                 audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 5);
             }
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            playPreviousAudio();
+            break;
+        case 'ArrowDown':
+            e.preventDefault();
+            playNextAudio();
             break;
         case 'n':
         case 'N':
